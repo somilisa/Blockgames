@@ -35,7 +35,7 @@ interface Token {
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }
 
-contract Standard_Token is Token {
+contract BasicERC20 is Token {
     uint256 constant private MAX_UINT256 = 2**256 - 1;
     mapping (address => uint256) public balances;
     mapping (address => mapping (address => uint256)) public allowed;
@@ -49,8 +49,12 @@ contract Standard_Token is Token {
     string public name;                   //fancy name: eg Simon Bucks
     uint8 public decimals;                //How many decimals to show.
     string public symbol;                 //An identifier: eg SBX
+    uint256 public unitsOneEthCanBuy = 1000;
+    address public tokenOwner;            // the owner of the token
+    uint public amount;
 
     constructor(uint256 _initialAmount, string memory _tokenName, uint8 _decimalUnits, string  memory _tokenSymbol) {
+        tokenOwner = msg.sender;
         balances[msg.sender] = _initialAmount;               // Give the creator all initial tokens
         totalSupply = _initialAmount;                        // Update total supply
         name = _tokenName;                                   // Set the name for display purposes
@@ -91,7 +95,26 @@ contract Standard_Token is Token {
     function allowance(address _owner, address _spender) public override view returns (uint256 remaining) {
         return allowed[_owner][_spender];
     }
-    function buyToken(address receiver) public payable {
-        balances[receiver] += msg.value / 0.001 ether;
+
+    // function buyToken(address _receiver) public payable {
+        // balances[_receiver] += msg.value / 0.001 ether;}
+
+    function buyToken(address _receiver) external payable {        
+        // msg.value (in Wei) is the ether sent to the 
+        // token contract
+        // msg.sender is the account that sends the ether to the 
+        // token contract
+        // amount is the token bought by the sender
+         amount = msg.value * unitsOneEthCanBuy;
+        // ensure you have enough tokens to sell
+        require(balanceOf(tokenOwner) >= amount, 
+            "Not enough tokens");
+        // transfer the token to the buyer
+        transferFrom(tokenOwner, _receiver, amount);
+        // emit an event to inform of the transfer        
+        emit Transfer(tokenOwner, _receiver , amount);
+        
+        // send the ether earned to the token owner
+        payable(tokenOwner).transfer(msg.value);
     }
 }
